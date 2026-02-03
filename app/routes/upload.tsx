@@ -1,7 +1,7 @@
 import {useEffect, useState, type FormEvent} from 'react'
 import Navbar from '~/components/Navbar'
 import FileUploader from '../components/FileUploader';
-import { usePuterStore } from '~/lib/Puter';
+import { usePuterStore } from '~/lib/puter';
 import { useNavigate } from 'react-router';
 import { convertPdfToImage } from '~/lib/pdfToImage';
 import { generateUUID } from '~/lib/utils';
@@ -64,6 +64,7 @@ const upload = () => {
         await kv.set(`resume:${uuid}`, JSON.stringify(data));
         setStatusText('Analysis complete!');
         console.log(data);
+        navigate(`/resume/${uuid}`);
     }
 
 

@@ -23,10 +23,6 @@ const WipeApp = () => {
     }, [isLoading]);
 
     const handleDelete = async () => {
-        // files.forEach(async (file) => {
-        //     await fs.delete(file.path);
-        // });
-        //NOTE - FOREACH WORNG APPROACH ASYNC
         for (const file of files) {
             await fs.delete(file.path);
         }

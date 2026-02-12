@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback } from "react"
 import { useDropzone } from "react-dropzone"
 import { formatSize } from "~/lib/utils";
 
@@ -30,40 +30,51 @@ const FileUploader = ({ onFileSelect, selectedFile }: FileUploaderProps) => {
         <div className='w-full'>
             <div {...getRootProps({ className: 'w-full' })}>
                 <input {...getInputProps()} />
-                <div className="w-full space-y-4 cursor-pointer flex flex-col items-center justify-center h-full min-h-[150px]">
+                <div className="w-full space-y-4 cursor-pointer flex flex-col items-center justify-center h-full min-h-[220px]">
                     {file ? (
-                        <div className="uploader-selected-file w-full" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                                <img src="/images/pdf.png" alt="pdf" className="w-10 h-10 object-contain flex-shrink-0" />
-                                <div className="text-left min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-gray-900 truncate">
+                        <div className="w-full p-8 bg-[#0B1120]/50 rounded-xl flex flex-col items-center justify-center border border-white/10 relative group/file" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex flex-col items-center text-center gap-4">
+                                <div className="relative">
+                                    <img src="/images/pdf.png" alt="pdf" className="w-16 h-16 object-contain" />
+                                    <div className="absolute -top-2 -right-2 bg-blue-500 rounded-full p-1 shadow-lg">
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-lg font-bold text-white max-w-[300px] truncate px-4">
                                         {file.name}
                                     </p>
-                                    <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                    <p className="text-sm text-slate-500 font-medium">
                                         {formatSize(file.size)}
                                     </p>
                                 </div>
                             </div>
                             <button
-                                className="p-2 ml-2 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
+                                className="mt-6 flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-all text-sm font-bold border border-red-500/20"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onFileSelect?.(null);
                                 }}
                             >
-                                <img src="/icons/cross.svg" alt="remove" className="w-5 h-5 opacity-60 hover:opacity-100" />
+                                <img src="/icons/cross.svg" alt="remove" className="w-4 h-4 invert opacity-80" />
+                                Remove File
                             </button>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center text-center ">
-                            <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mb-4 text-indigo-500">
-                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <div className="flex flex-col items-center justify-center text-center w-full py-8">
+                            <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 text-blue-500 border border-blue-500/20 group-hover:scale-110 transition-transform duration-300">
+                                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                </svg>
                             </div>
-                            <p className="text-lg font-bold text-gray-900 mb-1">
-                                Click to upload
-                                <span className="font-normal text-gray-500"> or drag and drop</span>
-                            </p>
-                            <p className="text-sm text-gray-400 font-medium">PDF (max {formatSize(maxFileSize)})</p>
+                            <div className="space-y-2">
+                                <p className="text-2xl font-bold text-white">
+                                    Click to upload <span className="text-slate-400 font-medium">or drag and drop</span>
+                                </p>
+                                <p className="text-base text-slate-500 font-medium uppercase tracking-wider">PDF, DOCX or DOC (max. 5MB)</p>
+                            </div>
                         </div>
                     )}
                 </div>

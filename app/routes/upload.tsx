@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import Navbar from '~/components/Navbar'
 import FileUploader from '../components/FileUploader';
 import { usePuterStore } from '~/lib/puter';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { convertPdfToImage } from '~/lib/pdfToImage';
 import { generateUUID } from '~/lib/utils';
 import { prepareInstructions } from '../../constants/index';
@@ -11,6 +11,13 @@ import { prepareInstructions } from '../../constants/index';
 const upload = () => {
     const { auth, isLoading, fs, ai, kv } = usePuterStore();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!isLoading && !auth.isAuthenticated) {
+            navigate('/auth?next=/upload');
+        }
+    }, [auth.isAuthenticated, isLoading, navigate]);
+
     const [isProcessing, setIsProcessing] = useState(false);
     const [statusText, setStatusText] = useState('');
     const [file, setFile] = useState<File | null>(null);
@@ -31,20 +38,29 @@ const upload = () => {
 
         if (!uploadedFile) return setStatusText('Error uploading file.');
 
-        setStatusText('Converting to image...');
-        const imageFile = await convertPdfToImage(file);
-        if (!imageFile.file) return setStatusText('Error converting PDF to image.');
+        setStatusText('Converting to images...');
+        // 1. Generate Full Quality Image (PNG)
+        const fullImageResult = await convertPdfToImage(file, { scale: 4, format: 'image/png' });
+        if (!fullImageResult.file) return setStatusText('Error converting to full image.');
 
-        setStatusText('uploading image...');
-        const uploadedImage = await fs.upload([imageFile.file]);
-        if (!uploadedImage) return setStatusText('Error uploading image.');
+        // 2. Generate Thumbnail (JPEG)
+        const thumbImageResult = await convertPdfToImage(file, { scale: 1, format: 'image/jpeg', quality: 0.7 });
+        if (!thumbImageResult.file) return setStatusText('Error converting to thumbnail.');
+
+        setStatusText('Uploading images...');
+        const fullImage = await fs.upload([fullImageResult.file]);
+        if (!fullImage) return setStatusText('Error uploading full image.');
+
+        const thumbImage = await fs.upload([thumbImageResult.file]);
+        if (!thumbImage) return setStatusText('Error uploading thumbnail.');
 
         setStatusText('Preparing data...');
         const uuid = generateUUID();
         const data = {
             id: uuid,
             resumePath: uploadedFile.path,
-            imagePath: uploadedImage.path,
+            imagePath: fullImage.path,
+            thumbnailPath: thumbImage.path,
             companyName, jobTitle, jobDescription,
             feedback: '',
         }
@@ -96,96 +112,113 @@ const upload = () => {
     }
 
     return (
-        <main className="min-h-screen bg-aurora relative overflow-hidden font-['Mona Sans']">
+        <main className="min-h-screen bg-[#0B1120] text-white font-['Mona Sans'] selection:bg-blue-500/30">
             <Navbar />
 
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-                <section className="flex flex-col items-center gap-10">
-                    <div className="text-center space-y-4">
-                        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
-                            Smart feedback for your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">dream job</span>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
+                <section className="flex flex-col items-center gap-12">
+                    <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <h1 className="text-4xl md:text-5xl font-black !text-white tracking-tight leading-tight">
+                            Smart feedback for your <span className="text-blue-500">dream job</span>
                         </h1>
                         {!isProcessing && (
-                            <p className="text-lg text-gray-600 max-w-xl mx-auto">
+                            <p className="text-lg text-slate-400 max-w-xl mx-auto">
                                 Drop your resume for an ATS score and improvement suggestions.
                             </p>
                         )}
                     </div>
 
                     {isProcessing ? (
-                        <div className="glass-card p-12 rounded-3xl w-full max-w-2xl flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500">
+                        <div className="bg-[#1a2333]/60 backdrop-blur-2xl p-12 rounded-[2.5rem] w-full max-w-2xl flex flex-col items-center text-center border border-white/5 animate-in fade-in zoom-in-95 duration-500">
                             <div className="relative mb-8">
-                                <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
-                                <img src="/images/resume-scan-2.gif" className="w-[120px] relative z-10 rounded-2xl shadow-sm" alt="Scanning..." />
+                                <div className="absolute inset-0 bg-blue-500 blur-3xl opacity-20 rounded-full animate-pulse"></div>
+                                <img src="/images/resume-scan-2.gif" className="w-[120px] relative z-10 rounded-2xl shadow-2xl border border-white/10" alt="Scanning..." />
                             </div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">{statusText}</h2>
-                            <p className="text-gray-500">This might take a few seconds...</p>
+                            <h2 className="text-2xl font-bold text-white mb-2">{statusText}</h2>
+                            <p className="text-slate-400 font-medium tracking-wide animate-pulse">Processing your application...</p>
                         </div>
                     ) : (
-                        <div className="glass-card p-8 md:p-10 rounded-[2rem] w-full max-w-2xl shadow-xl relative overflow-hidden">
-                            {/* Decorative gradient blob */}
-                            <div className="absolute -top-[20%] -right-[20%] w-[50%] h-[50%] bg-indigo-100/50 rounded-full blur-3xl pointer-events-none"></div>
+                        <div className="bg-[#1e293b]/60 backdrop-blur-3xl p-8 md:p-12 rounded-[2.5rem] w-full max-w-2xl border border-white/5 shadow-2xl relative overflow-hidden group">
+                            {/* Decorative glow */}
+                            <div className="absolute -top-[20%] -right-[20%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-blue-500/20 transition-all duration-700"></div>
 
-                            <form id="upload-form" onSubmit={handleSubmit} className='flex flex-col gap-6 relative z-10' noValidate>
+                            <form id="upload-form" onSubmit={handleSubmit} className='flex flex-col gap-6 relative z-10 w-full' noValidate>
                                 <div className="space-y-2 w-full">
-                                    <label htmlFor="company-name" className="text-sm font-semibold text-gray-700 ml-1">Company Name</label>
-                                    <div className="relative">
+                                    <label htmlFor="company-name" className="text-sm font-bold text-white block ml-1">Company Name</label>
+                                    <div className="relative w-full">
                                         <input
                                             type="text"
                                             name="company-name"
                                             placeholder="e.g. Google, Amazon"
                                             id="company-name"
-                                            className={`w-full block px-5 py-4 bg-gray-50/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-medium text-gray-900 placeholder:text-gray-400 ${errors.companyName ? 'border-red-300 focus:ring-red-200 focus:border-red-500' : 'border-gray-200 focus:ring-indigo-100 focus:border-indigo-500'}`}
+                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-white placeholder:text-slate-600 ${errors.companyName ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
                                             onChange={() => setErrors(prev => ({ ...prev, companyName: undefined }))}
                                         />
-                                        {errors.companyName && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.companyName}</p>}
+                                        {errors.companyName && <p className="text-red-400 text-[10px] mt-1.5 ml-1 font-black uppercase tracking-wider">{errors.companyName}</p>}
                                     </div>
                                 </div>
 
                                 <div className="space-y-2 w-full">
-                                    <label htmlFor="job-title" className="text-sm font-semibold text-gray-700 ml-1">Job Title</label>
-                                    <div className="relative">
+                                    <label htmlFor="job-title" className="text-sm font-bold text-white block ml-1">Job Title</label>
+                                    <div className="relative w-full">
                                         <input
                                             type="text"
                                             name="job-title"
                                             placeholder="e.g. Senior Frontend Engineer"
                                             id="job-title"
-                                            className={`w-full block px-5 py-4 bg-gray-50/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-medium text-gray-900 placeholder:text-gray-400 ${errors.jobTitle ? 'border-red-300 focus:ring-red-200 focus:border-red-500' : 'border-gray-200 focus:ring-indigo-100 focus:border-indigo-500'}`}
+                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-white placeholder:text-slate-600 ${errors.jobTitle ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
                                             onChange={() => setErrors(prev => ({ ...prev, jobTitle: undefined }))}
                                         />
-                                        {errors.jobTitle && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.jobTitle}</p>}
+                                        {errors.jobTitle && <p className="text-red-400 text-[10px] mt-1.5 ml-1 font-black uppercase tracking-wider">{errors.jobTitle}</p>}
                                     </div>
                                 </div>
 
                                 <div className="space-y-2 w-full">
-                                    <label htmlFor="job-description" className="text-sm font-semibold text-gray-700 ml-1">Job Description</label>
-                                    <div className="relative">
+                                    <div className="flex justify-between items-center ml-1 w-full">
+                                        <label htmlFor="job-description" className="text-sm font-bold text-white">Target Job Description</label>
+                                        <span className="text-xs text-slate-500">(Recommended)</span>
+                                    </div>
+                                    <div className="relative w-full">
                                         <textarea
-                                            rows={5}
+                                            rows={4}
                                             name="job-description"
-                                            placeholder="Paste the job description here..."
+                                            placeholder="Paste the job requirements here for a better match score..."
                                             id="job-description"
-                                            className={`w-full block px-5 py-4 bg-gray-50/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-medium text-gray-900 placeholder:text-gray-400 resize-none ${errors.jobDescription ? 'border-red-300 focus:ring-red-200 focus:border-red-500' : 'border-gray-200 focus:ring-indigo-100 focus:border-indigo-500'}`}
+                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-white placeholder:text-slate-600 resize-none ${errors.jobDescription ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
                                             onChange={() => setErrors(prev => ({ ...prev, jobDescription: undefined }))}
                                         />
-                                        {errors.jobDescription && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.jobDescription}</p>}
+                                        <div className="absolute bottom-3 right-4 text-[10px] font-black text-slate-600 uppercase tracking-widest pointer-events-none">
+                                            ATS Optimized
+                                        </div>
+                                        {errors.jobDescription && <p className="text-red-400 text-[10px] mt-1.5 ml-1 font-black uppercase tracking-wider">{errors.jobDescription}</p>}
                                     </div>
                                 </div>
 
-                                <div className="space-y-2 pt-2 w-full">
-                                    <label htmlFor="uploader" className="text-sm font-semibold text-gray-700 ml-1">Upload Resume</label>
-                                    <div className={`w-full border-2 border-dashed rounded-2xl transition-colors bg-white/50 ${errors.file ? 'border-red-300 hover:border-red-400' : 'border-indigo-100 hover:border-indigo-300'}`}>
+                                <div className="space-y-2 w-full">
+                                    <div className={`w-full border-2 border-dashed rounded-2xl transition-all duration-300 bg-[#0B1120]/30 hover:bg-[#0B1120]/50 ${errors.file ? 'border-red-500/30 hover:border-red-500' : 'border-white/5 hover:border-blue-500/50'}`}>
                                         <FileUploader onFileSelect={handleFileSelect} selectedFile={file} />
                                     </div>
-                                    {errors.file && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.file}</p>}
+                                    {errors.file && <p className="text-red-400 text-[10px] mt-1.5 ml-1 font-black uppercase tracking-wider">{errors.file}</p>}
                                 </div>
 
-                                <button
-                                    className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 mt-2"
-                                    type="submit"
-                                >
-                                    Analyze Resume
-                                </button>
+                                <div className="space-y-4 w-full pt-4">
+                                    <button
+                                        className="w-full py-5 px-6 rounded-2xl bg-blue-600 text-white font-black text-lg shadow-[0_4px_14px_0_rgba(37,99,235,0.39)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)] hover:-translate-y-1 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2"
+                                        type="submit"
+                                    >
+                                        Start Analysis
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                        </svg>
+                                    </button>
+
+                                    <Link
+                                        to="/"
+                                        className="block w-full text-center text-slate-400 hover:text-white transition-colors font-bold py-2"
+                                    >
+                                        Cancel and go back
+                                    </Link>
+                                </div>
                             </form>
                         </div>
                     )}

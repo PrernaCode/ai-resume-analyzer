@@ -13,11 +13,14 @@ const auth = () => {
     const { isLoading, auth } = usePuterStore();
     const navigate = useNavigate();
     const location = useLocation();
-    const next = location.search.split('next=')[1];
 
     useEffect(() => {
-        if (auth.isAuthenticated) navigate(next);
-    }, [auth.isAuthenticated, next]);
+        if (auth.isAuthenticated) {
+            const params = new URLSearchParams(location.search);
+            const next = params.get('next') || '/';
+            navigate(next, { replace: true });
+        }
+    }, [auth.isAuthenticated, location.search, navigate]);
 
     return (
         <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-50 font-['Inter']">

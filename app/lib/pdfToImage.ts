@@ -25,9 +25,17 @@ async function loadPdfJs(): Promise<any> {
     return loadPromise;
 }
 
+export interface ConvertOptions {
+    scale?: number;
+    format?: "image/png" | "image/jpeg";
+    quality?: number;
+}
+
 export async function convertPdfToImage(
-    file: File
+    file: File,
+    options: ConvertOptions = {}
 ): Promise<PdfConversionResult> {
+    const { scale = 4, format = "image/png", quality = 1.0 } = options;
     try {
         const lib = await loadPdfJs();
 
@@ -35,7 +43,7 @@ export async function convertPdfToImage(
         const pdf = await lib.getDocument({ data: arrayBuffer }).promise;
         const page = await pdf.getPage(1);
 
-        const viewport = page.getViewport({ scale: 4 });
+        const viewport = page.getViewport({ scale });
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
 
@@ -54,9 +62,10 @@ export async function convertPdfToImage(
                 (blob) => {
                     if (blob) {
                         // Create a File from the blob with the same name as the pdf
+                        const extension = format === "image/png" ? "png" : "jpg";
                         const originalName = file.name.replace(/\.pdf$/i, "");
-                        const imageFile = new File([blob], `${originalName}.png`, {
-                            type: "image/png",
+                        const imageFile = new File([blob], `${originalName}_${scale}.${extension}`, {
+                            type: format,
                         });
 
                         resolve({
@@ -71,9 +80,9 @@ export async function convertPdfToImage(
                         });
                     }
                 },
-                "image/png",
-                1.0
-            ); // Set quality to maximum (1.0)
+                format,
+                quality
+            );
         });
     } catch (err) {
         return {

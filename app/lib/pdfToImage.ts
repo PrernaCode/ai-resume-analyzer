@@ -1,6 +1,10 @@
-export interface PdfConversionResult {
+export interface PdfImage {
     imageUrl: string;
     file: File | null;
+}
+
+export interface PdfConversionResult {
+    images: PdfImage[];
     error?: string;
 }
 
@@ -25,69 +29,76 @@ async function loadPdfJs(): Promise<any> {
     return loadPromise;
 }
 
+export async function getPdfMetadata(file: File): Promise<{ pageCount: number } | { error: string }> {
+    try {
+        const lib = await loadPdfJs();
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await lib.getDocument({ data: arrayBuffer }).promise;
+        return { pageCount: pdf.numPages };
+    } catch (err) {
+        return { error: `Failed to read PDF metadata: ${err}` };
+    }
+}
+
 export interface ConvertOptions {
     scale?: number;
     format?: "image/png" | "image/jpeg";
     quality?: number;
+    maxPages?: number;
 }
 
 export async function convertPdfToImage(
     file: File,
     options: ConvertOptions = {}
 ): Promise<PdfConversionResult> {
-    const { scale = 4, format = "image/png", quality = 1.0 } = options;
+    const { scale = 4, format = "image/png", quality = 1.0, maxPages = 2 } = options;
     try {
         const lib = await loadPdfJs();
 
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await lib.getDocument({ data: arrayBuffer }).promise;
-        const page = await pdf.getPage(1);
+        
+        const numPages = Math.min(pdf.numPages, maxPages);
+        const images: PdfImage[] = [];
 
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
+        for (let i = 1; i <= numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
 
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
 
-        if (context) {
-            context.imageSmoothingEnabled = true;
-            context.imageSmoothingQuality = "high";
+            if (context) {
+                context.imageSmoothingEnabled = true;
+                context.imageSmoothingQuality = "high";
+            }
+
+            await page.render({ canvasContext: context!, viewport }).promise;
+
+            const blob: Blob | null = await new Promise((resolve) => {
+                canvas.toBlob((b) => resolve(b), format, quality);
+            });
+
+            if (blob) {
+                const extension = format === "image/png" ? "png" : "jpg";
+                const originalName = file.name.replace(/\.pdf$/i, "");
+                const imageFile = new File([blob], `${originalName}_p${i}_${scale}.${extension}`, {
+                    type: format,
+                });
+
+                images.push({
+                    imageUrl: URL.createObjectURL(blob),
+                    file: imageFile,
+                });
+            }
         }
 
-        await page.render({ canvasContext: context!, viewport }).promise;
-
-        return new Promise((resolve) => {
-            canvas.toBlob(
-                (blob) => {
-                    if (blob) {
-                        // Create a File from the blob with the same name as the pdf
-                        const extension = format === "image/png" ? "png" : "jpg";
-                        const originalName = file.name.replace(/\.pdf$/i, "");
-                        const imageFile = new File([blob], `${originalName}_${scale}.${extension}`, {
-                            type: format,
-                        });
-
-                        resolve({
-                            imageUrl: URL.createObjectURL(blob),
-                            file: imageFile,
-                        });
-                    } else {
-                        resolve({
-                            imageUrl: "",
-                            file: null,
-                            error: "Failed to create image blob",
-                        });
-                    }
-                },
-                format,
-                quality
-            );
-        });
+        return { images };
     } catch (err) {
         return {
-            imageUrl: "",
-            file: null,
+            images: [],
             error: `Failed to convert PDF: ${err}`,
         };
     }

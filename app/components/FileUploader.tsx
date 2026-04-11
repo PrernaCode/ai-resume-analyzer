@@ -14,7 +14,7 @@ const FileUploader = ({ onFileSelect, selectedFile }: FileUploaderProps) => {
         onFileSelect?.(file);
     }, [onFileSelect]);
 
-    const maxFileSize = 20 * 1024 * 1024; // 20 MB
+    const maxFileSize = 5 * 1024 * 1024; // 5 MB
 
     const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
         onDrop,
@@ -73,7 +73,7 @@ const FileUploader = ({ onFileSelect, selectedFile }: FileUploaderProps) => {
                                 <p className="text-2xl font-bold text-white">
                                     Click to upload <span className="text-slate-400 font-medium">or drag and drop</span>
                                 </p>
-                                <p className="text-base text-slate-500 font-medium uppercase tracking-wider">PDF, DOCX or DOC (max. 5MB)</p>
+                                <p className="text-base text-slate-500 font-medium uppercase tracking-wider">PDF format only (Max 2 pages, 5MB)</p>
                             </div>
                         </div>
                     )}

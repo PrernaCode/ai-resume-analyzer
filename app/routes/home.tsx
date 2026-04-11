@@ -115,7 +115,7 @@ export default function Home() {
                       try {
                         setResumes(current => current.filter(r => r.id !== id));
                         const key = `resume:${id}`;
-                        await kv.delete(key);
+                        await kv.del(key);
                       } catch (err) {
                         console.error("Failed to delete resume:", err);
                       }

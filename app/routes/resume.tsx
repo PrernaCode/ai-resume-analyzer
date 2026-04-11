@@ -15,7 +15,7 @@ export const meta = () => ([
 const resume = () => {
     const { kv, auth, isLoading, fs } = usePuterStore();
     const { id } = useParams();
-    const [imageUrl, setImageUrl] = useState('');
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [resumeUrl, setResumeUrl] = useState('');
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const navigate = useNavigate();
@@ -40,10 +40,12 @@ const resume = () => {
             const resumeUrl = URL.createObjectURL(pdfBlob);
             setResumeUrl(resumeUrl);
 
-            const imageBlob = await fs.read(data.imagePath);
-            if (!imageBlob) return;
-            const imageUrl = URL.createObjectURL(imageBlob);
-            setImageUrl(imageUrl);
+            const imagePaths = data.imagePaths || [data.imagePath];
+            if (imagePaths && imagePaths.length > 0) {
+                const blobs = await Promise.all(imagePaths.map((path: string) => fs.read(path)));
+                const urls = blobs.map(blob => blob ? URL.createObjectURL(blob) : '').filter(url => url !== '');
+                setImageUrls(urls);
+            }
 
             setFeedback(data.feedback);
         }
@@ -58,28 +60,32 @@ const resume = () => {
             <div className="flex flex-row w-full max-lg:flex-col-reverse flex-grow relative">
                 {/* Left Panel: Resume Preview */}
                 <section className="feedback-section bg-[#0B1120] h-[calc(100vh-5rem)] sticky top-20 hidden lg:block border-r border-white/5 overflow-y-auto no-scrollbar">
-                    {imageUrl && resumeUrl && (
-                        <div className="w-full min-h-full p-4 flex justify-center items-start">
-                            <div className="animate-in fade-in zoom-in-95 duration-700 bg-[#1a2333] p-1.5 shadow-2xl rounded-2xl w-full max-w-2xl border border-white/10 group">
-                                <a href={resumeUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full overflow-hidden rounded-xl">
-                                    <img
-                                        src={imageUrl}
-                                        className="w-full h-auto object-contain cursor-zoom-in transition-transform duration-700 group-hover:scale-[1.02]"
-                                        title="Click to Open PDF"
-                                        alt="Resume Preview"
-                                    />
-                                </a>
-                            </div>
+                    {imageUrls.length > 0 && resumeUrl && (
+                        <div className="w-full min-h-full p-4 flex flex-col items-center justify-start gap-8">
+                            {imageUrls.map((url, index) => (
+                                <div key={index} className="animate-in fade-in zoom-in-95 duration-700 bg-[#1a2333] p-1.5 shadow-2xl rounded-2xl w-full max-w-2xl border border-white/10 group">
+                                    <a href={resumeUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full overflow-hidden rounded-xl">
+                                        <img
+                                            src={url}
+                                            className="w-full h-auto object-contain cursor-zoom-in transition-transform duration-700 group-hover:scale-[1.02]"
+                                            title={`Click to Open PDF (Page ${index + 1})`}
+                                            alt={`Resume Preview Page ${index + 1}`}
+                                        />
+                                    </a>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </section>
 
                 {/* Mobile View Image */}
-                <section className="p-6 bg-[#1a2333] flex items-center justify-center lg:hidden pt-24">
-                    {imageUrl && resumeUrl && (
-                        <div className="bg-[#0B1120] p-1 shadow-2xl rounded-2xl h-[450px] border border-white/5">
-                            <img src={imageUrl} className="h-full object-contain rounded-xl" />
-                        </div>
+                <section className="p-6 bg-[#1a2333] flex flex-col gap-6 items-center justify-center lg:hidden pt-24">
+                    {imageUrls.length > 0 && resumeUrl && (
+                        imageUrls.map((url, index) => (
+                            <div key={index} className="bg-[#0B1120] p-1 shadow-2xl rounded-2xl h-[450px] border border-white/5">
+                                <img src={url} className="h-full object-contain rounded-xl" alt={`Resume Page ${index + 1}`} />
+                            </div>
+                        ))
                     )}
                 </section>
 
@@ -90,7 +96,7 @@ const resume = () => {
                             {/* Header for content */}
                             <div className="mb-4">
                                 <h2 className="text-3xl font-black !text-white mb-2 tracking-tight">Analysis Results</h2>
-                                <p className="text-slate-400 font-medium">Detailed AI insights to elevate your professional profile.</p>
+                                <p className="text-base text-slate-500 font-medium uppercase tracking-wider">PDF format only (Max 2 pages, 5MB)</p>
                             </div>
 
                             <div className="space-y-12">

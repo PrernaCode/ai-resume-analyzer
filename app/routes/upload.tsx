@@ -3,9 +3,10 @@ import Navbar from '~/components/Navbar'
 import FileUploader from '../components/FileUploader';
 import { usePuterStore } from '~/lib/puter';
 import { useNavigate, Link } from 'react-router';
-import { convertPdfToImage } from '~/lib/pdfToImage';
+import { convertPdfToImage, getPdfMetadata } from '~/lib/pdfToImage';
 import { generateUUID } from '~/lib/utils';
 import { prepareInstructions } from '../../constants/index';
+import { validateCompanyName, validateJobTitle, validateJobDescription } from '~/lib/validation';
 
 
 const upload = () => {
@@ -33,34 +34,48 @@ const upload = () => {
     //after uploading resume, this function will handle analysis
     const handleAnalyze = async ({ companyName, jobTitle, jobDescription, file }: { companyName: string, jobTitle: string, jobDescription: string, file: File }) => {
         setIsProcessing(true);
+        setStatusText('Checking resume...');
+        
+        const meta = await getPdfMetadata(file);
+        if ('error' in meta) {
+            setIsProcessing(false);
+            return setStatusText(meta.error);
+        }
+        if (meta.pageCount > 2) {
+            setIsProcessing(false);
+            return setStatusText('Error: Resume exceeds 2-page limit. Please upload a shorter resume.');
+        }
+
         setStatusText('Uploading resume...');
         const uploadedFile = await fs.upload([file]);
 
         if (!uploadedFile) return setStatusText('Error uploading file.');
 
         setStatusText('Converting to images...');
-        // 1. Generate Full Quality Image (PNG)
-        const fullImageResult = await convertPdfToImage(file, { scale: 4, format: 'image/png' });
-        if (!fullImageResult.file) return setStatusText('Error converting to full image.');
+        // 1. Generate Full Quality Images (PNG) - Max 2 pages
+        const fullResults = await convertPdfToImage(file, { scale: 4, format: 'image/png', maxPages: 2 });
+        if (fullResults.error || fullResults.images.length === 0) return setStatusText('Error converting to preview images.');
 
-        // 2. Generate Thumbnail (JPEG)
-        const thumbImageResult = await convertPdfToImage(file, { scale: 1, format: 'image/jpeg', quality: 0.7 });
-        if (!thumbImageResult.file) return setStatusText('Error converting to thumbnail.');
+        // 2. Generate Thumbnail (JPEG) - Only first page for dashboard
+        const thumbResults = await convertPdfToImage(file, { scale: 1, format: 'image/jpeg', quality: 0.7, maxPages: 1 });
+        if (thumbResults.error || thumbResults.images.length === 0) return setStatusText('Error converting to thumbnail.');
 
-        setStatusText('Uploading images...');
-        const fullImage = await fs.upload([fullImageResult.file]);
-        if (!fullImage) return setStatusText('Error uploading full image.');
+        setStatusText('Uploading previews...');
+        const fullImageFiles = fullResults.images.map(img => img.file).filter((f): f is File => f !== null);
+        const uploadedFullImages = await Promise.all(fullImageFiles.map(f => fs.upload([f])));
+        
+        const thumbFile = thumbResults.images[0].file;
+        const uploadedThumb = await fs.upload([thumbFile!]);
 
-        const thumbImage = await fs.upload([thumbImageResult.file]);
-        if (!thumbImage) return setStatusText('Error uploading thumbnail.');
+        if (uploadedFullImages.some(img => !img) || !uploadedThumb) return setStatusText('Error uploading images.');
 
         setStatusText('Preparing data...');
         const uuid = generateUUID();
         const data = {
             id: uuid,
             resumePath: uploadedFile.path,
-            imagePath: fullImage.path,
-            thumbnailPath: thumbImage.path,
+            imagePaths: uploadedFullImages.map(img => img!.path),
+            thumbnailPath: uploadedThumb.path,
             companyName, jobTitle, jobDescription,
             feedback: '',
         }
@@ -71,7 +86,6 @@ const upload = () => {
         const feedback = await ai.feedback(
             uploadedFile.path,
             prepareInstructions({ jobTitle, jobDescription })
-
         );
 
         if (!feedback) return setStatusText('Error: Failed to analyze resume.');
@@ -83,7 +97,6 @@ const upload = () => {
         data.feedback = JSON.parse(feedbackText);
         await kv.set(`resume:${uuid}`, JSON.stringify(data));
         setStatusText('Analysis complete!');
-        console.log(data);
         navigate(`/resume/${uuid}`);
     }
 
@@ -99,16 +112,32 @@ const upload = () => {
         const jobDescription = formData.get('job-description') as string;
 
         const newErrors: typeof errors = {};
-        if (!companyName.trim()) newErrors.companyName = "Company Name is required";
-        if (!jobTitle.trim()) newErrors.jobTitle = "Job Title is required";
-        if (!jobDescription.trim()) newErrors.jobDescription = "Job Description is required";
+
+        // Use new validation rules
+        const companyRes = validateCompanyName(companyName);
+        if (!companyRes.isValid) newErrors.companyName = companyRes.message;
+
+        const titleRes = validateJobTitle(jobTitle);
+        if (!titleRes.isValid) newErrors.jobTitle = titleRes.message;
+
+        const descRes = validateJobDescription(jobDescription);
+        if (!descRes.isValid) {
+            newErrors.jobDescription = descRes.message;
+        }
+
         if (!file) newErrors.file = "Please upload a resume file";
 
         setErrors(newErrors);
 
         if (Object.keys(newErrors).length > 0) return;
 
-        handleAnalyze({ companyName, jobTitle, jobDescription, file: file! });
+        // Proceed with sanitized description
+        handleAnalyze({ 
+            companyName: companyName.trim(), 
+            jobTitle: jobTitle.trim(), 
+            jobDescription: descRes.sanitized || jobDescription.trim(), 
+            file: file! 
+        });
     }
 
     return (
@@ -144,14 +173,14 @@ const upload = () => {
 
                             <form id="upload-form" onSubmit={handleSubmit} className='flex flex-col gap-6 relative z-10 w-full' noValidate>
                                 <div className="space-y-2 w-full">
-                                    <label htmlFor="company-name" className="text-sm font-bold text-white block ml-1">Company Name</label>
+                                    <label htmlFor="company-name" className="text-sm font-bold !text-white block ml-1">Company Name</label>
                                     <div className="relative w-full">
                                         <input
                                             type="text"
                                             name="company-name"
                                             placeholder="e.g. Google, Amazon"
                                             id="company-name"
-                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-white placeholder:text-slate-600 ${errors.companyName ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
+                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-black placeholder:text-slate-600 ${errors.companyName ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
                                             onChange={() => setErrors(prev => ({ ...prev, companyName: undefined }))}
                                         />
                                         {errors.companyName && <p className="text-red-400 text-[10px] mt-1.5 ml-1 font-black uppercase tracking-wider">{errors.companyName}</p>}
@@ -159,14 +188,14 @@ const upload = () => {
                                 </div>
 
                                 <div className="space-y-2 w-full">
-                                    <label htmlFor="job-title" className="text-sm font-bold text-white block ml-1">Job Title</label>
+                                    <label htmlFor="job-title" className="text-sm font-bold !text-white block ml-1">Job Title</label>
                                     <div className="relative w-full">
                                         <input
                                             type="text"
                                             name="job-title"
                                             placeholder="e.g. Senior Frontend Engineer"
                                             id="job-title"
-                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-white placeholder:text-slate-600 ${errors.jobTitle ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
+                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-black placeholder:text-slate-600 ${errors.jobTitle ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
                                             onChange={() => setErrors(prev => ({ ...prev, jobTitle: undefined }))}
                                         />
                                         {errors.jobTitle && <p className="text-red-400 text-[10px] mt-1.5 ml-1 font-black uppercase tracking-wider">{errors.jobTitle}</p>}
@@ -175,7 +204,7 @@ const upload = () => {
 
                                 <div className="space-y-2 w-full">
                                     <div className="flex justify-between items-center ml-1 w-full">
-                                        <label htmlFor="job-description" className="text-sm font-bold text-white">Target Job Description</label>
+                                        <label htmlFor="job-description" className="text-sm font-bold !text-white">Target Job Description</label>
                                         <span className="text-xs text-slate-500">(Recommended)</span>
                                     </div>
                                     <div className="relative w-full">
@@ -184,7 +213,7 @@ const upload = () => {
                                             name="job-description"
                                             placeholder="Paste the job requirements here for a better match score..."
                                             id="job-description"
-                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-white placeholder:text-slate-600 resize-none ${errors.jobDescription ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
+                                            className={`w-full block px-5 py-4 bg-[#0B1120]/50 border rounded-2xl focus:outline-none focus:ring-2 transition-all font-bold text-black placeholder:text-slate-600 resize-none ${errors.jobDescription ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50'}`}
                                             onChange={() => setErrors(prev => ({ ...prev, jobDescription: undefined }))}
                                         />
                                         <div className="absolute bottom-3 right-4 text-[10px] font-black text-slate-600 uppercase tracking-widest pointer-events-none">

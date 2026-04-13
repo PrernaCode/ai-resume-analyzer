@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, type MetaFunction } from "react-router";
 import { usePuterStore } from "~/lib/puter";
 import Summary from "~/components/Summary";
 import Details from "~/components/Details";
@@ -7,12 +7,18 @@ import ATS from "~/components/ATS";
 import Navbar from "~/components/Navbar";
 
 
-export const meta = () => [
-    { title: 'Resume Analysis Review | ResumeIQ' },
-    { name: 'description', content: 'Detailed AI-powered analysis of your resume, including ATS scoring and improvement suggestions.' },
-    { property: "og:title", content: "Resume Analysis Review | ResumeIQ" },
-    { property: "og:description", content: "Check out my resume analysis on ResumeIQ." },
-];
+export const meta: MetaFunction = () => {
+    const baseUrl = "https://resumeiq-lyart.vercel.app";
+
+    return [
+        { title: 'Resume Analysis Review | ResumeIQ' },
+        { name: 'description', content: 'Detailed AI-powered analysis of your resume, including ATS scoring and improvement suggestions.' },
+        { property: "og:title", content: "Resume Analysis Review | ResumeIQ" },
+        { property: "og:description", content: "Check out my resume analysis on ResumeIQ." },
+        { property: "og:image", content: `${baseUrl}/og-image.png` },
+        { property: "og:url", content: baseUrl },
+    ];
+};
 
 const resume = () => {
     const { kv, auth, isLoading, fs } = usePuterStore();

@@ -15,7 +15,7 @@ import type { MetaFunction } from "react-router";
 
 export const meta: MetaFunction = () => {
   // TODO: Replace with your actual deployment URL (e.g., https://resume-iq.vercel.app)
-  const baseUrl = "https://resumeiq-lyart.vercel.app/";
+  const baseUrl = "https://resumeiq-lyart.vercel.app";
 
   return [
     { title: "ResumeIQ | AI Resume Analyzer & ATS Optimizer" },

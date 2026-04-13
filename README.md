@@ -3,7 +3,7 @@
 
 
 🔗 **Links:**
-- **Live Demo:** [https://ai-resume-analyzer.vercel.app/]
+- **Live Demo:** [https://resumeiq-lyart.vercel.app/]
 
 
 ## Overview

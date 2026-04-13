@@ -7,10 +7,12 @@ import ATS from "~/components/ATS";
 import Navbar from "~/components/Navbar";
 
 
-export const meta = () => ([
-    { title: 'ResumeIQ | Review' },
-    { name: 'description', content: 'Detailed overview of your resume' }
-])
+export const meta = () => [
+    { title: 'Resume Analysis Review | ResumeIQ' },
+    { name: 'description', content: 'Detailed AI-powered analysis of your resume, including ATS scoring and improvement suggestions.' },
+    { property: "og:title", content: "Resume Analysis Review | ResumeIQ" },
+    { property: "og:description", content: "Check out my resume analysis on ResumeIQ." },
+];
 
 const resume = () => {
     const { kv, auth, isLoading, fs } = usePuterStore();

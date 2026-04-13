@@ -11,6 +11,26 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { usePuterStore } from "./lib/puter";
 import { useEffect } from "react";
+import type { MetaFunction } from "react-router";
+
+export const meta: MetaFunction = () => {
+  // TODO: Replace with your actual deployment URL (e.g., https://resume-iq.vercel.app)
+  const baseUrl = "https://your-domain.com"; 
+
+  return [
+    { title: "ResumeIQ | AI Resume Analyzer & ATS Optimizer" },
+    { name: "description", content: "Optimize your resume for your dream job with AI-powered feedback, ATS scoring, and actionable improvement tips." },
+    { property: "og:title", content: "ResumeIQ | AI Resume Analyzer" },
+    { property: "og:description", content: "Get instant, professional feedback on your resume. Optimize for ATS and land more interviews with AI." },
+    { property: "og:image", content: `${baseUrl}/og-image.png` },
+    { property: "og:url", content: baseUrl },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: "ResumeIQ | AI Resume Analyzer" },
+    { name: "twitter:description", content: "Get instant, professional feedback on your resume. Optimize for ATS and land more interviews." },
+    { name: "twitter:image", content: `${baseUrl}/og-image.png` },
+  ];
+};
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

@@ -7,6 +7,7 @@ import { convertPdfToImage, getPdfMetadata } from '~/lib/pdfToImage';
 import { generateUUID } from '~/lib/utils';
 import { prepareInstructions } from '../../constants/index';
 import { validateCompanyName, validateJobTitle, validateJobDescription } from '~/lib/validation';
+import { parseAIJSON, fallbackFeedback } from '~/lib/safeParser';
 
 
 const upload = () => {
@@ -77,7 +78,7 @@ const upload = () => {
             imagePaths: uploadedFullImages.map(img => img!.path),
             thumbnailPath: uploadedThumb.path,
             companyName, jobTitle, jobDescription,
-            feedback: '',
+            feedback: fallbackFeedback,
         }
 
         await kv.set(`resume:${uuid}`, JSON.stringify(data));
@@ -94,7 +95,7 @@ const upload = () => {
             ? feedback.message.content
             : feedback.message.content[0].text;
 
-        data.feedback = JSON.parse(feedbackText);
+        data.feedback = parseAIJSON(feedbackText, fallbackFeedback);
         await kv.set(`resume:${uuid}`, JSON.stringify(data));
         setStatusText('Analysis complete!');
         navigate(`/resume/${uuid}`);

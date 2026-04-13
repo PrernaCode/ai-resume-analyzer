@@ -20,7 +20,7 @@ const ResumeCard = ({ resume: { id, companyName, jobTitle, feedback, imagePath, 
                     setResumeUrl(url);
                 }
             } catch (err) {
-                console.error("Error loading resume image:", err);
+                // Silently handle image loading errors
             } finally {
                 setImageLoading(false);
             }

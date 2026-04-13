@@ -9,8 +9,10 @@ import LandingPage from "./LandingPage";
 
 export function meta({ }: Route.MetaArgs) {
   return [
-    { title: "ResumeIQ" },
-    { name: "description", content: "Smart feedback for your dream job!" },
+    { title: "Dashboard | ResumeIQ" },
+    { name: "description", content: "Manage your resume analyses and track your progress towards your dream job." },
+    { property: "og:title", content: "Dashboard | ResumeIQ" },
+    { property: "og:description", content: "Manage and track your resume improvements with AI." },
   ];
 }
 
@@ -117,7 +119,7 @@ export default function Home() {
                         const key = `resume:${id}`;
                         await kv.del(key);
                       } catch (err) {
-                        console.error("Failed to delete resume:", err);
+                        // Silently handle deletion errors
                       }
                     }}
                   />

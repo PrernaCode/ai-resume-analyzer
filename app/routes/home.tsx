@@ -15,7 +15,7 @@ export function meta({ }: Route.MetaArgs) {
     { name: "description", content: "Manage your resume analyses and track your progress towards your dream job." },
     { property: "og:title", content: "Dashboard | ResumeIQ" },
     { property: "og:description", content: "Manage and track your resume improvements with AI." },
-    { property: "og:image", content: `${baseUrl}/og-image.png` },
+    { property: "og:image", content: `${baseUrl}/og-image.jpg` },
     { property: "og:url", content: `${baseUrl}/home` },
   ];
 }

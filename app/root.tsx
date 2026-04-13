@@ -22,7 +22,7 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Optimize your resume for your dream job with AI-powered feedback, ATS scoring, and actionable improvement tips." },
     { property: "og:title", content: "ResumeIQ | AI Resume Analyzer" },
     { property: "og:description", content: "Get instant, professional feedback on your resume. Optimize for ATS and land more interviews with AI." },
-    { property: "og:image", content: `${baseUrl}/og-image.png` },
+    { property: "og:image", content: `${baseUrl}/og-image.jpg` },
     { property: "og:url", content: baseUrl },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary_large_image" },

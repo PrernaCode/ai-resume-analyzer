@@ -15,7 +15,7 @@ export const meta: MetaFunction = () => {
         { name: 'description', content: 'Detailed AI-powered analysis of your resume, including ATS scoring and improvement suggestions.' },
         { property: "og:title", content: "Resume Analysis Review | ResumeIQ" },
         { property: "og:description", content: "Check out my resume analysis on ResumeIQ." },
-        { property: "og:image", content: `${baseUrl}/og-image.png` },
+        { property: "og:image", content: `${baseUrl}/og-image.jpg` },
         { property: "og:url", content: baseUrl },
     ];
 };

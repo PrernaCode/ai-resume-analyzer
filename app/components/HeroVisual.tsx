@@ -1,5 +1,3 @@
-import React from 'react';
-
 const HeroVisual = () => {
     return (
         <div className="relative w-full max-w-lg mx-auto">

@@ -1,5 +1,3 @@
-import React from 'react'
-
 interface Suggestion {
   type: "good" | "improve";
   tip: string;
@@ -10,7 +8,7 @@ interface ATSProps {
   suggestions: Suggestion[];
 }
 
-const ATS: React.FC<ATSProps> = ({ score, suggestions }) => {
+const ATS = ({ score, suggestions }: ATSProps) => {
   // Determine colors based on score
   const scoreColor = score > 69 ? 'text-emerald-400' : score > 49 ? 'text-amber-400' : 'text-rose-400';
   const scoreBg = score > 69 ? 'bg-emerald-500/10' : score > 49 ? 'bg-amber-500/10' : 'bg-rose-500/10';

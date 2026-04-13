@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import React, { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, type ReactNode, type FC } from "react";
 import { cn } from "~/lib/utils";
 
 interface AccordionContextType {
@@ -66,7 +65,7 @@ interface AccordionItemProps {
     className?: string;
 }
 
-export const AccordionItem: React.FC<AccordionItemProps> = ({
+export const AccordionItem: FC<AccordionItemProps> = ({
     id,
     children,
     className = "",
@@ -86,7 +85,7 @@ interface AccordionHeaderProps {
     iconPosition?: "left" | "right";
 }
 
-export const AccordionHeader: React.FC<AccordionHeaderProps> = ({
+export const AccordionHeader: FC<AccordionHeaderProps> = ({
     itemId,
     children,
     className = "",
@@ -144,7 +143,7 @@ interface AccordionContentProps {
     className?: string;
 }
 
-export const AccordionContent: React.FC<AccordionContentProps> = ({
+export const AccordionContent: FC<AccordionContentProps> = ({
     itemId,
     children,
     className = "",
